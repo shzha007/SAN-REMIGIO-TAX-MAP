@@ -34,6 +34,19 @@
             justify-content: center;
             text-align: center;
         }
+        .parcel-label {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            box-shadow: none;
+            font-family: Arial, sans-serif;
+            font-size: 8pt;
+            color: #000;
+            padding: 1px 3px;
+            white-space: nowrap;
+        }
+        .hide-parcel-labels .parcel-label {
+             display: none !important;
+        }
         </style>
         <title></title>
     </head>
@@ -362,13 +375,16 @@
                         });
                     }
                 }
-       layer_TAXMAP_3.eachLayer(function(layer) {
-    if (layer.feature && layer.feature.properties) {
-        var p = layer.feature.properties;
-        layer.feature.properties.SearchKey =
-            (p.Owner || '') + ' ' + (p.Lot_No || '') + ' ' + (p.TD_Number || '') + ' ' + (p.Barangay || '');
-    }
-});
+       setTimeout(function() {
+
+    layer_TAXMAP_3.eachLayer(function(layer) {
+        if (layer.feature && layer.feature.properties) {
+            var p = layer.feature.properties;
+            layer.feature.properties.SearchKey =
+                (p.Owner || '') + ' ' + (p.Lot_No || '') + ' ' + (p.TD_Number || '') + ' ' + (p.Barangay || '');
+        }
+    });
+
     var searchControl = new L.Control.Search({
         layer: layer_TAXMAP_3,
         initial: false,
@@ -395,15 +411,12 @@
     searchControl.on('search:locationfound', function(e) {
         if (e.layer) {
             map.fitBounds(e.layer.getBounds(), { maxZoom: 19 });
-
             if (highlightLayer) {
                 map.removeLayer(highlightLayer);
             }
-
             highlightLayer = L.geoJSON(e.layer.feature, {
                 style: { fillColor: '#ffe600', color: '#ff0000', weight: 5, fillOpacity: 0.9 }
             }).addTo(map);
-
             var blinkCount = 0;
             var blinkInterval = setInterval(function() {
                 if (!highlightLayer) { clearInterval(blinkInterval); return; }
@@ -418,6 +431,45 @@
         }
     });
 
+    if (typeof url === 'undefined') {
+        document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
+    } else {
+        document.getElementsByClassName('search-button')[1].className += ' fa fa-search';
+    }
+
+    var labeledLayers = [];
+    var LABEL_MIN_ZOOM = 17;
+
+    function updateParcelLabels() {
+        labeledLayers.forEach(function(layer) {
+            layer.unbindTooltip();
+        });
+        labeledLayers = [];
+
+        if (map.getZoom() < LABEL_MIN_ZOOM) return;
+
+        var bounds = map.getBounds();
+        layer_TAXMAP_3.eachLayer(function(layer) {
+            try {
+                if (layer.feature && layer.feature.properties && layer.getBounds && bounds.intersects(layer.getBounds())) {
+                    var p = layer.feature.properties;
+                    var labelText = (p.Lot_No || '') + '<br>' + (p.Owner || '');
+                    layer.bindTooltip(labelText, {
+                        permanent: true,
+                        direction: 'center',
+                        className: 'parcel-label'
+                    });
+                    labeledLayers.push(layer);
+                }
+            } catch (err) {
+                console.warn('Skipped label for a parcel with bad geometry:', err);
+            }
+        });
+    }
+    map.on('zoomend moveend', updateParcelLabels);
+    updateParcelLabels();
+
+}, 0);
     if (typeof url === 'undefined') {
         document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
     } else {
@@ -448,6 +500,17 @@
                 map.invalidateSize();
             }, 600);
         });
+        var LABEL_MIN_ZOOM = 50;
+
+        function updateLabelVisibility() {
+            if (map.getZoom() >= LABEL_MIN_ZOOM) {
+                document.body.classList.remove('hide-parcel-labels');
+            } else {
+                document.body.classList.add('hide-parcel-labels');
+            }
+        }
+        map.on('zoomend', updateLabelVisibility);
+        updateLabelVisibility();
     </script>      
     </body>
 </html>
