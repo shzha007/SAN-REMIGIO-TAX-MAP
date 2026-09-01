@@ -11,6 +11,8 @@
         <link rel="stylesheet" href="css/qgis2web.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         <link rel="stylesheet" href="css/leaflet-search.css">
+		<link rel="stylesheet" href="css/leaflet.browser.print.min.css">
+		<script src="js/leaflet.browser.print.min.js"></script>
         <link rel="stylesheet" href="css/leaflet.photon.css">
         <link rel="stylesheet" href="css/leaflet-measure.css">
         <style>
@@ -405,7 +407,7 @@
         }
     });
     map.addControl(searchControl);
-
+		   
     var highlightLayer = null;
 
     searchControl.on('search:locationfound', function(e) {
@@ -430,6 +432,15 @@
             }, 300);
         }
     });
+
+	    try {
+        L.control.browserPrint({
+            title: 'Print Map',
+            position: 'topleft'
+        }).addTo(map);
+    } catch (err) {
+        console.warn('Could not initialize print control:', err);
+    }
 
     if (typeof url === 'undefined') {
         document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
