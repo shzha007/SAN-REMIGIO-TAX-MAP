@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <title>SAN REMIGIO TAX MAP</title>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
@@ -11,11 +12,11 @@
         <link rel="stylesheet" href="css/qgis2web.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         <link rel="stylesheet" href="css/leaflet-search.css">
-		<link rel="stylesheet" href="css/leaflet.browser.print.min.css">
-		<script src="js/leaflet.browser.print.min.js"></script>
         <link rel="stylesheet" href="css/leaflet.photon.css">
         <link rel="stylesheet" href="css/leaflet-measure.css">
+        
         <style>
+        
         html, body {
             width: 100%;
             height: 100%;
@@ -37,17 +38,49 @@
             text-align: center;
         }
         .parcel-label {
-            background: rgba(255, 255, 255, 0.3);
+            background: transparent;
             border: none;
             box-shadow: none;
             font-family: Arial, sans-serif;
             font-size: 8pt;
             color: #000;
-            padding: 1px 3px;
+            padding: 0;
             white-space: nowrap;
+            text-align: center;
+            text-shadow:
+                -1px -1px 0 #fff,
+                1px -1px 0 #fff,
+                -1px 1px 0 #fff,
+                1px 1px 0 #fff,
+                0px -1px 0 #fff,
+                0px 1px 0 #fff,
+                -1px 0px 0 #fff,
+                1px 0px 0 #fff;
         }
-        .hide-parcel-labels .parcel-label {
-             display: none !important;
+        .parcel-label::before {
+            display: none;
+                }
+        .leaflet-browser-print {
+            background-color: rgb(232, 177, 31) !important;
+        }
+
+        .barangay-name-label {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-family: Arial, sans-serif;
+            font-size: 16pt;
+            font-weight: bold;
+            color: #0c2350;
+            text-align: center;
+            text-shadow:
+                -1px -1px 0 #fff, 1px -1px 0 #fff,
+                -1px 1px 0 #fff, 1px 1px 0 #fff,
+                0px -1px 0 #fff, 0px 1px 0 #fff,
+                -1px 0px 0 #fff, 1px 0px 0 #fff;
+        }
+        .barangay-name-label::before {
+            display: none;
         }
         </style>
         <title></title>
@@ -64,6 +97,7 @@
         </div>
         <script src="js/qgis2web_expressions.js"></script>
         <script src="js/leaflet.js"></script>
+        <script src="js/leaflet.browser.print.min.js"></script>
         <script src="js/L.Control.Layers.Tree.min.js"></script>
         <script src="js/leaflet.rotatedMarker.js"></script>
         <script src="js/leaflet.pattern.js"></script>
@@ -336,8 +370,12 @@
                 last.style.display = "none";
             }
         });
+        var layer_ParcelLabels = L.layerGroup([]).addTo(map);
+        var layer_BarangayColors = L.layerGroup([]);
         var overlaysTree = [
             {label: '<img src="legend/TAXMAP_3.png" /> TAX MAP', layer: layer_TAXMAP_3},
+            {label: "Barangay Colors", layer: layer_BarangayColors},
+            {label: "Parcel Labels", layer: layer_ParcelLabels},
             {label: "Google Hybrid", layer: layer_GoogleHybrid_2},
             {label: "OpenStreetMap", layer: layer_OpenStreetMap_1},
             {label: "Google Satellite", layer: layer_GoogleSatellite_0},]
@@ -352,32 +390,10 @@
         });
         lay.addTo(map);
         map.on("zoomend", function(){
-
-                if (map.hasLayer(layer_TAXMAP_3)) {
-                    if (map.getZoom() <= 14 && map.getZoom() >= 19) {
-                        layer_TAXMAP_3.eachLayer(function (layer) {
-                            layer.openTooltip();
-                        });
-                    } else {
-                        layer_TAXMAP_3.eachLayer(function (layer) {
-                            layer.closeTooltip();
-                        });
-                    }
-                }
         });
         setBounds();
-                if (map.hasLayer(layer_TAXMAP_3)) {
-                    if (map.getZoom() <= 14 && map.getZoom() >= 19) {
-                        layer_TAXMAP_3.eachLayer(function (layer) {
-                            layer.openTooltip();
-                        });
-                    } else {
-                        layer_TAXMAP_3.eachLayer(function (layer) {
-                            layer.closeTooltip();
-                        });
-                    }
-                }
-       setTimeout(function() {
+                
+setTimeout(function() {
 
     layer_TAXMAP_3.eachLayer(function(layer) {
         if (layer.feature && layer.feature.properties) {
@@ -394,7 +410,11 @@
         propertyName: 'SearchKey',
         textPlaceholder: 'Search Owner, Lot No., TD Number, or Barangay...',
         casesensitive: false,
-        marker: false,
+        marker: L.icon({
+            iconUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ycQICH5BAEAAAAALAAAAAABAAEAAAIBAAA7',
+            iconSize: [1, 1],
+            iconAnchor: [0, 0]
+        }),
         zoom: 19,
         buildTip: function(text, record) {
             var p = record.layer.feature.properties;
@@ -407,7 +427,16 @@
         }
     });
     map.addControl(searchControl);
-		   
+
+    try {
+    L.control.browserPrint({
+        title: 'Print Map',
+        position: 'topleft'
+    }).addTo(map);
+} catch (err) {
+    console.warn('Could not initialize print control:', err);
+}
+
     var highlightLayer = null;
 
     searchControl.on('search:locationfound', function(e) {
@@ -433,60 +462,158 @@
         }
     });
 
-	    try {
-        L.control.browserPrint({
-            title: 'Print Map',
-            position: 'topleft'
-        }).addTo(map);
-    } catch (err) {
-        console.warn('Could not initialize print control:', err);
-    }
-
+    try {
     if (typeof url === 'undefined') {
-        document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
+        if (document.getElementsByClassName('search-button')[0]) {
+            document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
+        }
     } else {
-        document.getElementsByClassName('search-button')[1].className += ' fa fa-search';
+        if (document.getElementsByClassName('search-button')[1]) {
+            document.getElementsByClassName('search-button')[1].className += ' fa fa-search';
+        }
     }
+} catch (err) {
+    console.warn('Could not set search icon:', err);
+}
 
     var labeledLayers = [];
     var LABEL_MIN_ZOOM = 17;
 
-    function updateParcelLabels() {
-        labeledLayers.forEach(function(layer) {
-            layer.unbindTooltip();
-        });
-        labeledLayers = [];
-
-        if (map.getZoom() < LABEL_MIN_ZOOM) return;
-
-        var bounds = map.getBounds();
-        layer_TAXMAP_3.eachLayer(function(layer) {
-            try {
-                if (layer.feature && layer.feature.properties && layer.getBounds && bounds.intersects(layer.getBounds())) {
-                    var p = layer.feature.properties;
-                    var labelText = (p.Lot_No || '') + '<br>' + (p.Owner || '');
-                    layer.bindTooltip(labelText, {
-                        permanent: true,
-                        direction: 'center',
-                        className: 'parcel-label'
-                    });
-                    labeledLayers.push(layer);
-                }
-            } catch (err) {
-                console.warn('Skipped label for a parcel with bad geometry:', err);
+    function getSafeLabelPoint(layer) {
+    try {
+        return layer.getBounds().getCenter();
+    } catch (e) {
+        try {
+            var coords = layer.feature.geometry.coordinates;
+            while (Array.isArray(coords[0])) {
+                coords = coords[0];
             }
-        });
+            return L.latLng(coords[1], coords[0]);
+        } catch (e2) {
+            return null;
+        }
     }
-    map.on('zoomend moveend', updateParcelLabels);
-    updateParcelLabels();
+}
 
-}, 0);
-    if (typeof url === 'undefined') {
+function updateParcelLabels() {
+    layer_ParcelLabels.clearLayers();
+    
+    if (!map.hasLayer(layer_ParcelLabels)) return;
+    if (map.getZoom() < LABEL_MIN_ZOOM) return;
+
+    var bounds = map.getBounds();
+    layer_TAXMAP_3.eachLayer(function(layer) {
+        try {
+            if (!layer.feature || !layer.feature.properties) return;
+
+            var labelPoint = getSafeLabelPoint(layer);
+            if (!labelPoint || !bounds.contains(labelPoint)) return;
+
+            var p = layer.feature.properties;
+            var labelText = 'Lot ' + (p.Lot_No || '') + '<br>' + (p.Owner || '');
+
+            var labelMarker = L.marker(labelPoint, {
+                icon: L.divIcon({ className: '', html: '', iconSize: [0, 0] }),
+                interactive: false
+            });
+            labelMarker.bindTooltip(labelText, {
+                permanent: true,
+                direction: 'center',
+                className: 'parcel-label'
+            });
+            layer_ParcelLabels.addLayer(labelMarker);
+        } catch (err) {
+            console.warn('Skipped label for a parcel with bad geometry:', err);
+        }
+    });
+}
+map.on('zoomend moveend', updateParcelLabels);
+map.on('overlayadd overlayremove', updateParcelLabels);
+updateParcelLabels();
+
+var barangayList = ['POBLACION','ANAPOG','ARGAWANON','BAGTIC','BANCASAN','BATAD','BUSOGON','CALAMBUA','CANAGAHAN','DAPDAP','GAWAYGAWAY','HAGNAYA','KAYAM','KINAWAHAN','LAMBUSAN','LAWIS','LIBAONG','LOOC','LUYANG','MAÑO','PUNTA','SAB-A','SAN MIGUEL','TACUP','TAMBONGON','TOONG','VICTORIA'];
+
+var barangayColors = {};
+barangayList.forEach(function(name, i) {
+    var hue = Math.round((360 / barangayList.length) * i);
+    barangayColors[name] = 'hsl(' + hue + ', 65%, 55%)';
+});
+
+var defaultParcelStyle = { fillColor: 'transparent', fillOpacity: 0, color: '#3388ff', weight: 1 };
+
+function applyBarangayColors() {
+    layer_TAXMAP_3.eachLayer(function(layer) {
+        if (layer.feature && layer.feature.properties) {
+            var b = layer.feature.properties.Barangay;
+            layer.setStyle({
+                fillColor: barangayColors[b] || '#999999',
+                color: '#333333',
+                weight: 1,
+                fillOpacity: 0.6
+            });
+        }
+    });
+}
+
+function resetBarangayColors() {
+    layer_TAXMAP_3.eachLayer(function(layer) {
+        layer.setStyle(defaultParcelStyle);
+    });
+}
+
+function buildBarangayLabels() {
+    layer_BarangayLabels.clearLayers();
+    var barangayBounds = {};
+
+    layer_TAXMAP_3.eachLayer(function(layer) {
+        try {
+            if (layer.feature && layer.feature.properties) {
+                var b = layer.feature.properties.Barangay;
+                var lb = layer.getBounds();
+                if (!barangayBounds[b]) {
+                    barangayBounds[b] = L.latLngBounds(lb.getSouthWest(), lb.getNorthEast());
+                } else {
+                    barangayBounds[b].extend(lb);
+                }
+            }
+        } catch (err) {}
+    });
+
+    Object.keys(barangayBounds).forEach(function(name) {
+        var center = barangayBounds[name].getCenter();
+        var marker = L.marker(center, {
+            icon: L.divIcon({ className: '', html: '', iconSize: [0, 0] }),
+            interactive: false
+        });
+        marker.bindTooltip(name, {
+            permanent: true,
+            direction: 'center',
+            className: 'barangay-name-label'
+        });
+        layer_BarangayLabels.addLayer(marker);
+    });
+}
+
+map.on('overlayadd', function(e) {
+    if (e.layer === layer_BarangayColors) {
+        applyBarangayColors();
+        buildBarangayLabels();
+        layer_BarangayLabels.addTo(map);
+    }
+});
+map.on('overlayremove', function(e) {
+    if (e.layer === layer_BarangayColors) {
+        resetBarangayColors();
+        map.removeLayer(layer_BarangayLabels);
+    }
+});
+
+ if (typeof url === 'undefined') {
         document.getElementsByClassName('search-button')[0].className += ' fa fa-search';
     } else {
         document.getElementsByClassName('search-button')[1].className += ' fa fa-search';
-    } 
-
+    }
+}, 0);
         </script>  
         <script>
         var startBtn = document.getElementById('startBtn');
@@ -512,16 +639,8 @@
             }, 600);
         });
         var LABEL_MIN_ZOOM = 50;
-
-        function updateLabelVisibility() {
-            if (map.getZoom() >= LABEL_MIN_ZOOM) {
-                document.body.classList.remove('hide-parcel-labels');
-            } else {
-                document.body.classList.add('hide-parcel-labels');
-            }
-        }
-        map.on('zoomend', updateLabelVisibility);
-        updateLabelVisibility();
+        
+        
     </script>      
     </body>
 </html>
